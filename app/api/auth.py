@@ -5,9 +5,17 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from pydantic import EmailStr
 
 from app.api.deps import get_current_user_doc
+from app.core.categories import BUSINESS_CATEGORIES, canonical_category, is_valid_category
 from app.core.security import create_token_pair, hash_password, verify_password
 from app.db.mongo import businesses_collection, users_collection
-from app.schemas.auth import BusinessRegisterForm, TokenPair, UserLoginRequest, UserResponse
+from app.schemas.auth import (
+    BusinessRegisterForm,
+    BusinessesListResponse,
+    TokenPair,
+    UserLoginRequest,
+    UserResponse,
+)
+from app.services.business_service import paginate_businesses
 from app.services.user_service import (
     add_update_timestamp,
     build_image_payload,
@@ -106,10 +114,15 @@ async def register_business(
     description: str = Form(..., min_length=5, max_length=1000),
     photo: UploadFile = File(...),
 ) -> TokenPair:
+    if not is_valid_category(category):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid category",
+        )
     payload = BusinessRegisterForm(
         name=name,
         geo=geo,
-        category=category,
+        category=canonical_category(category),
         description=description,
     )
     photo_bytes = await photo.read()
@@ -124,3 +137,40 @@ async def register_business(
     }
     result = businesses_collection.insert_one(business_doc)
     return create_token_pair(subject_id=str(result.inserted_id), subject_type="business")
+
+
+@router.get("/businesses", response_model=BusinessesListResponse)
+async def list_businesses(
+    page: int = 1,
+    page_size: int = 20,
+    category: str | None = None,
+    category_q: str | None = None,
+    geo: str | None = None,
+) -> BusinessesListResponse:
+    query: dict[str, Any] = {}
+
+    if category is not None:
+        if not is_valid_category(category):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid category")
+        query["category"] = canonical_category(category)
+
+    if category_q is not None and category_q.strip():
+        query["category"] = {"$regex": category_q.strip(), "$options": "i"}
+
+    if geo is not None and geo.strip():
+        query["geo"] = {"$regex": geo.strip(), "$options": "i"}
+
+    return paginate_businesses(
+        collection=businesses_collection,
+        query=query,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/businesses/categories")
+async def list_categories(q: str | None = None) -> dict[str, list[str]]:
+    if q is None or not q.strip():
+        return {"categories": BUSINESS_CATEGORIES}
+    needle = q.strip().lower()
+    return {"categories": [c for c in BUSINESS_CATEGORIES if needle in c.lower()]}

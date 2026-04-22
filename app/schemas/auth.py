@@ -28,3 +28,21 @@ class BusinessRegisterForm(BaseModel):
     geo: str = Field(min_length=2, max_length=200)
     category: str = Field(min_length=2, max_length=80)
     description: str = Field(min_length=5, max_length=1000)
+
+
+class BusinessResponse(BaseModel):
+    id: str
+    name: str
+    geo: str
+    category: str
+    description: str
+    created_at: datetime
+    has_photo: bool
+
+
+class BusinessesListResponse(BaseModel):
+    items: list[BusinessResponse]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
