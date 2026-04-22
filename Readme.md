@@ -8,3 +8,4 @@
 - Git
 - Github
 - Web hosting
+- Google GenAI
