@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import math
 from typing import Any
 
@@ -51,3 +53,18 @@ def paginate_businesses(
         total=total,
         total_pages=total_pages,
     )
+
+
+def businesses_to_csv_rows(business_docs: list[dict[str, Any]]) -> str:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["category", "name", "geo"])
+    for doc in business_docs:
+        writer.writerow(
+            [
+                doc.get("category", ""),
+                doc.get("name", ""),
+                doc.get("geo", ""),
+            ]
+        )
+    return buffer.getvalue()
