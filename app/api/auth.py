@@ -20,6 +20,7 @@ from app.services.user_service import (
     add_update_timestamp,
     build_image_payload,
     ensure_email_unique,
+    ensure_name_unique,
     serialize_user,
 )
 
@@ -39,6 +40,7 @@ async def register_user(
     avatar: UploadFile = File(...),
 ) -> TokenPair:
     ensure_email_unique(str(email))
+    ensure_name_unique(str(name))
 
     avatar_bytes = await avatar.read()
     avatar_payload = build_image_payload(avatar, avatar_bytes)
@@ -83,6 +85,7 @@ async def update_current_user(
         update_data["name"] = name
     if email is not None and str(email) != current_user["email"]:
         ensure_email_unique(str(email), current_user["_id"])
+        ensure_name_unique(str(name))
         update_data["email"] = str(email)
     if password is not None:
         update_data["password_hash"] = hash_password(password)

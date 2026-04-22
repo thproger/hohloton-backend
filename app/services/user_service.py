@@ -61,6 +61,17 @@ def ensure_email_unique(email: str, current_user_id: ObjectId | None = None) -> 
         detail="User with this email already exists",
     )
 
+def ensure_name_unique(name: str, current_user_id: ObjectId | None = None) -> None:
+    existing_user = users_collection.find_one({"name": name})
+    if existing_user is None:
+        return
+    if current_user_id is not None and existing_user["_id"] == current_user_id:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="User with this name already exists"
+    )
+
 
 def add_update_timestamp(update_data: dict[str, Any]) -> dict[str, Any]:
     update_data["updated_at"] = datetime.now(timezone.utc)
