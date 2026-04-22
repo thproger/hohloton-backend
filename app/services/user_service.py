@@ -41,13 +41,6 @@ def get_user_by_id(user_id: str) -> dict[str, Any]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token subject",
         )
-    user_doc = users_collection.find_one({"_id": ObjectId(user_id)})
-    if user_doc is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    return user_doc
 
 
 def ensure_email_unique(email: str, current_user_id: ObjectId | None = None) -> None:
